@@ -1,0 +1,105 @@
+# ============================================================
+# 工程代码 —— C++【命名规则】静态检查
+#
+# 作用：把 Google C++ Style Guide 的命名规则翻译成 clang-tidy 检查项。
+# 执行者：clangd 内置的 clang-tidy（clangd 22 已内置，无需单独装 clang-tidy）。
+#
+# 作用范围：本目录及所有子目录。
+#   竞赛刷题代码在 ../ACM/，那里刻意关掉了命名检查（见 ../ACM/.clang-tidy）。
+#
+# 为什么命名要单独一个文件：
+#   clang-format（.clang-format）只管排版，完全不碰标识符名字。
+#   想让它帮你检查"函数名该不该驼峰"，只能靠 clang-tidy。
+#
+# 注意：.clang-tidy 没有 BasedOnStyle: Google 这种预置风格，
+#       Google 的命名规则必须像下面这样逐条手写。
+#
+# 完整说明与验证方法见 ../README.md
+# ============================================================
+---
+# `-*` 先关掉所有默认检查，只保留命名检查。
+# 目的是让重点突出：这个目录里出现的警告，就是命名问题。
+# 想加别的检查，在 readability-identifier-naming 后面追加，例如：
+#   ,readability-braces-around-statements,modernize-use-nullptr
+Checks: >
+  -*,
+  readability-identifier-naming
+
+CheckOptions:
+  # ---------- 类型名 → CamelCase ----------
+  # 例：HttpRequest、Point2D、IntList、Color
+  - {key: readability-identifier-naming.ClassCase,        value: CamelCase}
+  - {key: readability-identifier-naming.StructCase,       value: CamelCase}
+  - {key: readability-identifier-naming.UnionCase,        value: CamelCase}
+  - {key: readability-identifier-naming.EnumCase,         value: CamelCase}
+  - {key: readability-identifier-naming.TypeAliasCase,    value: CamelCase}   # using X = ...
+  - {key: readability-identifier-naming.TypedefCase,      value: CamelCase}   # typedef ... X
+  - {key: readability-identifier-naming.ConceptCase,      value: CamelCase}   # C++20 concept
+
+  # ---------- 函数 / 方法 → 小驼峰 lowerCamelCase ----------
+  # 例：addNumbers、getValue、quickSort、startRpc
+  #
+  # 【为什么和 Google 预置不一样】
+  # Google 规范要求函数 PascalCase（AddNumbers），本工程改成小驼峰。
+  # 注意 clang-tidy 里小驼峰的值名是 camelBack —— 不是 lowerCamelCase。
+  # 值名要以本机版本为准：clang-tidy --dump-config
+  #
+  # 【和变量的分界线】函数小驼峰 + 变量 snake_case，于是
+  #   add_numbers 是变量、addNumbers 是函数，靠"有没有下划线"一眼可分。
+  #
+  # 想让函数回到 PascalCase：把下面两行的 camelBack 改回 CamelCase。
+  # 想让函数名完全不检查：删掉这两行。
+  - {key: readability-identifier-naming.FunctionCase,     value: camelBack}
+  - {key: readability-identifier-naming.MethodCase,       value: camelBack}
+
+  # ---------- 变量 / 参数 → snake_case ----------
+  # 例：total_count、max_size、global_counter
+  - {key: readability-identifier-naming.VariableCase,        value: lower_case}
+  - {key: readability-identifier-naming.GlobalVariableCase,  value: lower_case}
+  - {key: readability-identifier-naming.LocalVariableCase,   value: lower_case}
+  - {key: readability-identifier-naming.ParameterCase,       value: lower_case}
+
+  # ---------- class 的数据成员 → snake_case + 尾下划线 ----------
+  # Google：类的数据成员额外加尾下划线。例：buffer_size_、max_capacity_
+  - {key: readability-identifier-naming.PrivateMemberCase,      value: lower_case}
+  - {key: readability-identifier-naming.PrivateMemberSuffix,    value: "_"}
+  - {key: readability-identifier-naming.ProtectedMemberCase,    value: lower_case}
+  - {key: readability-identifier-naming.ProtectedMemberSuffix,  value: "_"}
+
+  # ---------- struct 的公有数据成员 → snake_case，不加尾下划线 ----------
+  # Google：只有【类】的成员加尾下划线，【结构体】的不加。
+  # clang-tidy 正好能靠 public/private 区分这两者，所以这里不设 Suffix。
+  - {key: readability-identifier-naming.PublicMemberCase,     value: lower_case}
+
+  # ---------- 常量 → k 前缀 + CamelCase ----------
+  # Google：常量用 k 打头接驼峰。例：kMaxRetries、kDefaultTimeout、kRed
+  - {key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase}
+  - {key: readability-identifier-naming.GlobalConstantPrefix,     value: "k"}
+  - {key: readability-identifier-naming.ConstexprVariableCase,    value: CamelCase}
+  - {key: readability-identifier-naming.ConstexprVariablePrefix,  value: "k"}
+  - {key: readability-identifier-naming.ClassConstantCase,        value: CamelCase}
+  - {key: readability-identifier-naming.ClassConstantPrefix,      value: "k"}
+  - {key: readability-identifier-naming.EnumConstantCase,         value: CamelCase}
+  - {key: readability-identifier-naming.EnumConstantPrefix,       value: "k"}
+  - {key: readability-identifier-naming.ScopedEnumConstantCase,   value: CamelCase}
+  - {key: readability-identifier-naming.ScopedEnumConstantPrefix, value: "k"}
+
+  # 有意【不设置】LocalConstantCase：
+  # Google 的 k 前缀针对的是编译期常量。函数内部随手写的
+  # `const int n = nums.size();` 若也强制改成 kN，噪音远大于收益。
+  # 想要更严格，自己加一行 LocalConstantCase / LocalConstantPrefix 即可。
+
+  # ---------- 命名空间 → snake_case ----------
+  - {key: readability-identifier-naming.NamespaceCase,    value: lower_case}
+
+  # ---------- 宏 → UPPER_CASE ----------
+  # 这一条在写竞态风格的短宏时最容易烦人。真遇到需要违反的场合：
+  #   用 // NOLINT(readability-identifier-naming) 单独放过某一行，
+  #   而不是把整条规则删掉。
+  - {key: readability-identifier-naming.MacroDefinitionCase,  value: UPPER_CASE}
+
+  # ---------- 模板参数 ----------
+  # Google：类型模板参数按类型规则走（CamelCase）
+  - {key: readability-identifier-naming.TypeTemplateParameterCase,  value: CamelCase}
+  # 值模板参数按变量规则走（snake_case）
+  - {key: readability-identifier-naming.ValueTemplateParameterCase, value: lower_case}

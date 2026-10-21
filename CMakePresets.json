@@ -1,0 +1,23 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "mingw-ninja",
+      "displayName": "MinGW g++ + Ninja (Debug)",
+      "description": "用 C:/mingw64 的 g++ 16.2.0，Ninja 生成器，产物在 build/",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "C:/mingw64/bin/g++.exe",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "mingw-debug",
+      "displayName": "构建 (Debug)",
+      "configurePreset": "mingw-ninja"
+    }
+  ]
+}
